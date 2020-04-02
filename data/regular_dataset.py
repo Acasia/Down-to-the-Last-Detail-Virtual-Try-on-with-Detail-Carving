@@ -135,7 +135,7 @@ class RegularDataset(BaseDataset):
         source_pose_path = os.path.join('dataset/pose_coco', self.mode, source_splitext.split('/')[0], source_splitext.split('/')[1] +'_keypoints.json')
         with open(source_pose_path, 'r') as f:
             a = json.load(f)
-            source_pose = a['people'][0]['pose_keypoints_2d']
+            source_pose = a['people'][0]['pose_keypoints']
         source_pose_loc = pose_utils.pose2loc(source_pose)
         source_pose_embedding = pose_utils.heatmap_embedding(self.size, source_pose_loc)
         
@@ -143,7 +143,7 @@ class RegularDataset(BaseDataset):
         target_pose_path = os.path.join('dataset/pose_coco', self.mode, target_splitext.split('/')[0], target_splitext.split('/')[1] +'_keypoints.json')
         with open(target_pose_path, 'r') as f:
             a = json.load(f)
-            target_pose = a['people'][0]['pose_keypoints_2d']
+            target_pose = a['people'][0]['pose_keypoints']
         target_pose_loc = pose_utils.pose2loc(target_pose)
         target_pose_embedding = pose_utils.heatmap_embedding(self.size, target_pose_loc)
         target_pose_img, _ = pose_utils.draw_pose_from_cords(target_pose_loc, (256, 192))
