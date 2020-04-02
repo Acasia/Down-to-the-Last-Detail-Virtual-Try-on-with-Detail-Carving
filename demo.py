@@ -15,12 +15,12 @@ import datetime
 import torch.backends.cudnn as cudnn
 import numpy as np
 from torchvision import utils
-from utils import data
+from torch.utils import data
 from PIL import Image
 from utils import pose_utils
 import torch.nn.functional as F
 from utils.warp_image import warped_image
-from lib.geometric_matching import GMM
+from lib.geometric_matching_multi_gpu import GMM
 from torchvision import utils
 from PIL import Image
 import time
@@ -90,8 +90,9 @@ def forward(opt, paths, gpu_ids, refine_path):
         augment['1'] = transforms.Compose([
                                 # transforms.Resize(256),
                                 transforms.ToTensor(),
-                                transforms.Normalize((0.5), (0.5))
+                                transforms.Normalize((0.5, ), (0.5, ))
         ]) # change to [C, H, W]
+
     
     
     val_dataset = DemoDataset(opt, augment=augment)

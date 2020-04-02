@@ -32,6 +32,7 @@ class BaseModel(ABC):
         self.criterionBCE_re = PixelSoftmaxLoss(self.weight).cuda()
         self.criterion_tv = TVLoss()
         # log dir
+        opt.train_mode = opt.train_mode.replace("\r", "")
         if opt.joint_all:
             self.save_dir = os.path.join('net_model', 'joint_checkpoint', opt.suffix)
         else:   

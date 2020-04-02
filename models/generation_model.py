@@ -45,7 +45,9 @@ class GenerationModel(BaseModel):
                                         not opt.no_dropout, opt.init_type, opt.init_gain, opt.gpu_ids)
         self.discriminator_face = Define_D(opt.input_nc_D_face, opt.ndf, opt.netD_face, opt.n_layers_D, 
                                         opt.norm, opt.init_type, opt.init_gain, opt.gpu_ids)
-        
+
+
+        opt.train_mode = opt.train_mode.replace("\r", "")
         if opt.train_mode == 'gmm':
             setattr(self, 'generator', self.gmm_model)
         else:
