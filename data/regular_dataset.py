@@ -50,11 +50,11 @@ class RegularDataset(BaseDataset):
         t0 = time.time()
         try:
             img_source = self.img_list[index].split('\t')[0]
-            img_target = self.img_list[index].split('\t')[1]
+            img_target = self.img_list[index].split('\t')[0]
             cloth_img = self.img_list[index].split('\t')[2]
         except:
             img_source = self.img_list[index].split(' ')[0]
-            img_target = self.img_list[index].split(' ')[1]
+            img_target = self.img_list[index].split(' ')[0]
             cloth_img = self.img_list[index].split(' ')[2]
 
         source_splitext = os.path.splitext(img_source)[0]
