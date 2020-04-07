@@ -151,7 +151,7 @@ def save_img(images, path):
             if images[i].shape[1] == 3:
                 images[i] = ((images[i].permute(0,2,3,1).contiguous().cpu().numpy() * 0.5 + 0.5) * 255).astype(np.uint8)
     for i in range(len(images[0])):
-        img.append(np.concatenate([image[i] for image in images], axis=1))
+        img.append(np.concatenate([image[i].cpu().numpy() if type(image[i]) == torch.Tensor else image[i] for image in images], axis=1))
     
     img = np.concatenate(img, axis=0)
 
