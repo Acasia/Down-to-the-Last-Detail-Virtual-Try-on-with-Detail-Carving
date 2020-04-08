@@ -45,7 +45,7 @@ class Config():
         parser.add_argument('--start_epoch', type=int, default=0)
         parser.add_argument('--epoch', type=int, default=200)
         parser.add_argument('--size', type=tuple, default=(256,192))
-        parser.add_argument('--num_workers', type=int, default=16)
+        parser.add_argument('--num_workers', type=int, default=4)
         parser.add_argument('--gan_mode', type=str, default='lsgan')  # lsgan or vanilla? lsgan is better compared with vanilla  make sense bceloss
         parser.add_argument('--save_epoch_freq', type=int, default=1)
         parser.add_argument('--print_freq', type=int, default=10)
