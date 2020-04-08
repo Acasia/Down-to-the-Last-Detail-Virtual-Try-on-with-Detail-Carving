@@ -13,6 +13,9 @@ from utils import pose_utils
 import os.path as osp
 from torchvision import utils
 import random
+from tensorboardX import SummaryWriter
+summary = SummaryWriter()
+cuda0 = torch.device('cuda:0')
 
 class GenerationModel(BaseModel):
     def name(self):
@@ -33,7 +36,8 @@ class GenerationModel(BaseModel):
         self.gmm_model = torch.nn.DataParallel(GMM(opt)).cuda()
         self.generator_parsing = Define_G(opt.input_nc_G_parsing, opt.output_nc_parsing, opt.ndf, opt.netG_parsing, opt.norm, 
                                         not opt.no_dropout, opt.init_type, opt.init_gain, opt.gpu_ids)
-        self.discriminator_parsing = Define_D(opt.input_nc_D_parsing, opt.ndf, opt.netD_parsing, opt.n_layers_D, 
+
+        self.discriminator_parsing = Define_D(opt.input_nc_D_parsing, opt.ndf, opt.netD_parsing, opt.n_layers_D,
                                         opt.norm, opt.init_type, opt.init_gain, opt.gpu_ids)
 
         self.generator_appearance = Define_G(opt.input_nc_G_app, opt.output_nc_app, opt.ndf, opt.netG_app, opt.norm, 
@@ -46,6 +50,12 @@ class GenerationModel(BaseModel):
         self.discriminator_face = Define_D(opt.input_nc_D_face, opt.ndf, opt.netD_face, opt.n_layers_D, 
                                         opt.norm, opt.init_type, opt.init_gain, opt.gpu_ids)
 
+        self.generator_parsing = self.generator_parsing.to(device=cuda0)
+        self.discriminator_parsing = self.discriminator_parsing.to(device=cuda0)
+        self.generator_appearance = self.generator_appearance.to(device=cuda0)
+        self.discriminator_appearance = self.discriminator_appearance.to(device=cuda0)
+        self.generator_face = self.generator_face.to(device=cuda0)
+        self.discriminator_face = self.discriminator_face.to(device=cuda0)
 
         opt.train_mode = opt.train_mode.replace("\r", "")
         if opt.train_mode == 'gmm':
@@ -368,8 +378,7 @@ class GenerationModel(BaseModel):
 
     def save_model(self, opt, epoch):
         if opt.train_mode == 'gmm':
-            model_G = osp.join(self.save_dir, 'generator', 'checkpoint_G_epoch_%d_loss_%0.5f_pth.tar'%(epoch, self.loss_G))
-            
+            model_G = osp.join(self.save_dir, 'generator', 'checkpoint_G_epoch_%d_loss_%0.5f_pth.tar'%(epoch, self.loss))
             if not osp.exists(osp.join(self.save_dir, 'generator')):
                 os.makedirs(osp.join(self.save_dir, 'generator'))
 
@@ -378,6 +387,7 @@ class GenerationModel(BaseModel):
         elif not opt.joint_all:  
             model_G = osp.join(self.save_dir, 'generator', 'checkpoint_G_epoch_%d_loss_%0.5f_pth.tar'%(epoch, self.loss_G))
             model_D = osp.join(self.save_dir, 'dicriminator', 'checkpoint_D_epoch_%d_loss_%0.5f_pth.tar'%(epoch, self.loss_D))
+
             if not osp.exists(osp.join(self.save_dir, 'generator')):
                 os.makedirs(osp.join(self.save_dir, 'generator'))
             if not osp.exists(osp.join(self.save_dir, 'dicriminator')):
@@ -409,24 +419,53 @@ class GenerationModel(BaseModel):
     def print_current_errors(self, opt, epoch, i):
         if opt.train_mode == 'gmm':
             errors = {'loss_L1': self.loss.item()}
+            summary.add_scalar('loss/gmm/L1_loss', self.loss.item(), epoch)
 
         if opt.train_mode == 'appearance':
             errors = {'loss_G': self.loss_G.item(), 'loss_G_GAN': self.loss_G_GAN.item(), 'loss_G_vgg':self.loss_G_vgg.item(), 'loss_G_mask':self.loss_G_mask.item(),
-                        'loss_G_L1': self.loss_G_L1.item(), 'loss_D':self.loss_D.item(), 'loss_D_real': self.loss_D_real.item(), 'loss_D_fake':self.loss_D_real.item(), 'loss_G_mask_tv': self.loss_G_mask_tv.item()}
-            
+                        'loss_G_L1': self.loss_G_L1.item(), 'loss_D':self.loss_D.item(), 'loss_D_real': self.loss_D_real.item(), 'loss_D_fake':self.loss_D_fake.item(), 'loss_G_mask_tv': self.loss_G_mask_tv.item()}
+
+            summary.add_scalar('loss/appearance/loss_G', self.loss_G.item(), epoch)
+            summary.add_scalar('loss/appearance/loss_G_L1', self.loss_G_L1.item(), epoch)
+            summary.add_scalar('loss/appearance/loss_G_GAN', self.loss_G_GAN.item(), epoch)
+            summary.add_scalar('loss/appearance/loss_D', self.loss_D.item(), epoch)
+            summary.add_scalar('loss/appearance/loss_G_vgg', self.loss_G_vgg.item(), epoch)
+            summary.add_scalar('loss/appearance/loss_D_real', self.loss_D_real.item(), epoch)
+            summary.add_scalar('loss/appearance/loss_G_mask', self.loss_G_mask.item(), epoch)
+            summary.add_scalar('loss/appearance/loss_D_real', self.loss_D_real.item(), epoch)
+            summary.add_scalar('loss/appearance/loss_G_mask_tv', self.loss_G_mask_tv.item(), epoch)
+
             if opt.joint_all and opt.joint_parse_loss:
                 errors = {'loss_G': self.loss_G.item(), 'loss_G_GAN': self.loss_G_GAN.item(), 'loss_G_vgg':self.loss_G_vgg.item(), 'loss_G_mask':self.loss_G_mask.item(),
-                        'loss_G_L1': self.loss_G_L1.item(), 'loss_D':self.loss_D.item(), 'loss_D_real': self.loss_D_real.item(), 'loss_D_fake':self.loss_D_real.item(), 'loss_G_parsing': self.loss_G_parsing.item()}
-
+                        'loss_G_L1': self.loss_G_L1.item(), 'loss_D':self.loss_D.item(), 'loss_D_real': self.loss_D_real.item(), 'loss_D_fake':self.loss_D_fake.item(), 'loss_G_parsing': self.loss_G_parsing.item()}
 
         if opt.train_mode == 'parsing':
             errors = {'loss_G': self.loss_G.item(), 'loss_G_GAN': self.loss_G_GAN.item(), 'loss_G_BCE': self.loss_G_BCE.item(), 
-                    'loss_D':self.loss_D.item(), 'loss_D_real': self.loss_D_real.item(), 'loss_D_fake':self.loss_D_real.item()}
+                    'loss_D':self.loss_D.item(), 'loss_D_real': self.loss_D_real.item(), 'loss_D_fake':self.loss_D_fake.item()}
+
+            summary.add_scalar('loss/parsing/loss_G', self.loss_G.item(), epoch)
+            summary.add_scalar('loss/parsing/loss_G_GAN', self.loss_G_GAN.item(), epoch)
+            summary.add_scalar('loss/parsing/loss_G_BCE', self.loss_G_BCE.item(), epoch)
+            summary.add_scalar('loss/parsing/loss_D', self.loss_D.item(), epoch)
+            summary.add_scalar('loss/parsing/loss_D_real', self.loss_D_real.item(), epoch)
+            summary.add_scalar('loss/parsing/loss_D_fake', self.loss_D_fake.item(), epoch)
+
+
 
         if opt.train_mode == 'face':
             errors = {'loss_G': self.loss_G.item(), 'loss_G_GAN': self.loss_G_GAN.item(), 'loss_G_vgg':self.loss_G_vgg.item(), 'loss_G_refine':self.loss_G_refine.item(),
-                        'loss_G_L1': self.loss_G_L1.item(), 'loss_D':self.loss_D.item(), 'loss_D_real': self.loss_D_real.item(), 'loss_D_fake':self.loss_D_real.item()}
-        
+                        'loss_G_L1': self.loss_G_L1.item(), 'loss_D':self.loss_D.item(), 'loss_D_real': self.loss_D_real.item(), 'loss_D_fake':self.loss_D_fake.item()}
+
+            summary.add_scalar('loss/face/loss_G', self.loss_G.item(), epoch)
+            summary.add_scalar('loss/face/loss_G_GAN', self.loss_G_GAN.item(), epoch)
+            summary.add_scalar('loss/face/loss_G_vgg', self.loss_G_vgg.item(), epoch)
+            summary.add_scalar('loss/face/loss_G_refine', self.loss_G_refine.item(), epoch)
+            summary.add_scalar('loss/face/loss_G_L1', self.loss_G_L1.item(), epoch)
+            summary.add_scalar('loss/face/loss_D', self.loss_D.item(), epoch)
+            summary.add_scalar('loss/face/loss_D_real', self.loss_D_real.item(), epoch)
+            summary.add_scalar('loss/face/loss_D_real', self.loss_D_real.item(), epoch)
+
+
         t = self.t11 - self.t2
         message = '(epoch: %d, iters: %d, time: %.3f) ' % (epoch, i, t)
         for k, v in sorted(errors.items()):
