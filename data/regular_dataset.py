@@ -28,12 +28,12 @@ class RegularDataset(BaseDataset):
         self.fine_width = 192
         self.fine_height = 256
         self.size = (256, 192)
-        
+        self.base_path = '/DATA1/jwKim/DLD'
         if self.isdemo:
             self.img_list =[i.strip() for i in open('demo/demo.txt', 'r').readlines()]
             self.mode = ''
         else:
-            pair_list =[i.strip() for i in open('dataset/data_pair.txt', 'r').readlines()]
+            pair_list =[i.strip() for i in open(os.path.join(self.base_path, 'dataset/data_pair.txt'), 'r').readlines()]
             train_list = list(filter(lambda p: p.split('\t')[3] == 'train', pair_list))
             train_list = [i for i in train_list]
             test_list = list(filter(lambda p: p.split('\t')[3] == 'test', pair_list))
@@ -62,10 +62,10 @@ class RegularDataset(BaseDataset):
         cloth_splitext = os.path.splitext(cloth_img)[0]
         self.mode = 'all'
         # png or jpg
-        source_img_path = os.path.join('dataset/images', self.mode, source_splitext + '.jpg')
-        target_img_path = os.path.join('dataset/images', self.mode, target_splitext + '.jpg')
-        cloth_img_path = os.path.join('dataset/images', self.mode, cloth_img)
-        cloth_parse_path = os.path.join('dataset/images', self.mode, cloth_splitext + '_mask.jpg')
+        source_img_path = os.path.join(self.base_path, 'dataset/images', self.mode, source_splitext + '.jpg')
+        target_img_path = os.path.join(self.base_path, 'dataset/images', self.mode, target_splitext + '.jpg')
+        cloth_img_path = os.path.join(self.base_path, 'dataset/images', self.mode, cloth_img)
+        cloth_parse_path = os.path.join(self.base_path, 'dataset/images', self.mode, cloth_splitext + '_mask.jpg')
 
         # cloth_parse_path = os.path.join('dataset/cloth_mask', self.mode, cloth_splitext + '_mask.png')
 
@@ -74,7 +74,7 @@ class RegularDataset(BaseDataset):
                             target_splitext.split('/')[1] + '_' + \
                             cloth_splitext.split('/')[1] + '_warped_cloth.jpg'
         ### image
-        warped_cloth_path = os.path.join('dataset', 'warped_cloth', self.mode, warped_cloth_name)
+        warped_cloth_path = os.path.join(self.base_path, 'dataset', 'warped_cloth', self.mode, warped_cloth_name)
         source_img = self.open_transform(source_img_path, False)
         target_img = self.open_transform(target_img_path, False)
         cloth_img = self.open_transform(cloth_img_path, False)
@@ -86,7 +86,7 @@ class RegularDataset(BaseDataset):
                 target_splitext.split('/')[1] + '_' + \
                 cloth_splitext.split('/')[1] + '_warped_cloth_mask.png'
             ### mask
-            warped_cloth_parse_path = os.path.join('dataset', 'warped_cloth_mask', self.mode, warped_cloth_parse_name)
+            warped_cloth_parse_path = os.path.join(self.base_path, 'dataset', 'warped_cloth_mask', self.mode, warped_cloth_parse_name)
             warped_cloth_parse = self.parse_cloth(warped_cloth_parse_path)
         except:
             warped_cloth_parse = torch.ones(1,256,192)
@@ -96,13 +96,13 @@ class RegularDataset(BaseDataset):
         else:
             warped_cloth_img = cloth_img
         # parsing
-        source_parse_vis_path = os.path.join('dataset/parse_cihp' , self.mode, source_splitext.split('/')[0], source_splitext.split('/')[1] + '_vis.png')
-        target_parse_vis_path = os.path.join('dataset/parse_cihp' , self.mode, target_splitext.split('/')[0], target_splitext.split('/')[1] + '_vis.png')
+        source_parse_vis_path = os.path.join(self.base_path, 'dataset/parse_cihp' , self.mode, source_splitext.split('/')[0], source_splitext.split('/')[1] + '_vis.png')
+        target_parse_vis_path = os.path.join(self.base_path, 'dataset/parse_cihp' , self.mode, target_splitext.split('/')[0], target_splitext.split('/')[1] + '_vis.png')
         source_parse_vis = self.transforms['3'](Image.open(source_parse_vis_path))
         target_parse_vis = self.transforms['3'](Image.open(target_parse_vis_path))
         
-        source_parse_path = os.path.join('dataset/parse_cihp', self.mode, source_splitext.split('/')[0], source_splitext.split('/')[1] + '.png')
-        target_parse_path = os.path.join('dataset/parse_cihp', self.mode, target_splitext.split('/')[0], target_splitext.split('/')[1] + '.png')
+        source_parse_path = os.path.join(self.base_path, 'dataset/parse_cihp', self.mode, source_splitext.split('/')[0], source_splitext.split('/')[1] + '.png')
+        target_parse_path = os.path.join(self.base_path, 'dataset/parse_cihp', self.mode, target_splitext.split('/')[0], target_splitext.split('/')[1] + '.png')
 
         source_parse = pose_utils.parsing_embedding(source_parse_path)
         target_parse = pose_utils.parsing_embedding(target_parse_path)
@@ -132,7 +132,7 @@ class RegularDataset(BaseDataset):
         im_h = source_img * phead - (1 - phead) # [-1,1], fill -1 for other parts, thus become black visual
         
         # pose heatmap embedding
-        source_pose_path = os.path.join('dataset/pose_coco', self.mode, source_splitext.split('/')[0], source_splitext.split('/')[1] +'_keypoints.json')
+        source_pose_path = os.path.join(self.base_path, 'dataset/pose_coco', self.mode, source_splitext.split('/')[0], source_splitext.split('/')[1] +'_keypoints.json')
         with open(source_pose_path, 'r') as f:
             a = json.load(f)
             source_pose = a['people'][0]['pose_keypoints']
@@ -140,7 +140,7 @@ class RegularDataset(BaseDataset):
         source_pose_embedding = pose_utils.heatmap_embedding(self.size, source_pose_loc)
         
 
-        target_pose_path = os.path.join('dataset/pose_coco', self.mode, target_splitext.split('/')[0], target_splitext.split('/')[1] +'_keypoints.json')
+        target_pose_path = os.path.join(self.base_path, 'dataset/pose_coco', self.mode, target_splitext.split('/')[0], target_splitext.split('/')[1] +'_keypoints.json')
         with open(target_pose_path, 'r') as f:
             a = json.load(f)
             target_pose = a['people'][0]['pose_keypoints']
