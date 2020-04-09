@@ -15,6 +15,7 @@ from torchvision import utils
 import random
 from tensorboardX import SummaryWriter
 import copy
+import torchvision
 summary = SummaryWriter()
 cuda0 = torch.device('cuda:0')
 
@@ -374,6 +375,7 @@ class GenerationModel(BaseModel):
         self.show_img_iter += iteration - self.show_img_iter
         if opt.train_mode == 'gmm':
             images = [self.cloth_image,self.warped_cloth.detach(), self.im_c]
+            self.im_c = (self.im_c * 0.5 + 0.5)
             summary.add_images('Image/train_gmm/im_c', self.im_c, self.show_img_iter)
 
         if opt.train_mode == 'parsing':
@@ -384,10 +386,12 @@ class GenerationModel(BaseModel):
         if opt.train_mode == 'appearance':
             images = [self.image_without_cloth, self.warped_cloth, self.warped_cloth_parse, self.target_image, 
                         self.cloth_image, self.generated_parsing_vis, self.fake_t.detach()]
+            self.fake_t = (self.fake_t * 0.5 + 0.5)
             summary.add_images('Image/train_appearance/fake_t', self.fake_t.detach(), self.show_img_iter)
 
         if opt.train_mode == 'face':
             images = [self.generated_image.detach(), self.refined_image.detach(), self.source_image, self.target_image, self.real_t, self.fake_t.detach()]
+            self.fake_t = (self.fake_t * 0.5 + 0.5)
             summary.add_images('Image/train_face/fake_t', self.fake_t.detach(), self.show_img_iter)
 
 
