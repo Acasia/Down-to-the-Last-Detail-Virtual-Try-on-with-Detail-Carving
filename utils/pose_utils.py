@@ -157,6 +157,7 @@ def save_img(images, path):
 
     image = Image.fromarray(img.astype(np.uint8))
     image.save(path)
+    return image
 
 def save_img_grid(images, path):
     assert len(images) > 0
