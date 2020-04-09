@@ -33,10 +33,12 @@ class BaseModel(ABC):
         self.criterion_tv = TVLoss()
         # log dir
         opt.train_mode = opt.train_mode.replace("\r", "")
+        self.base_path = '/DATA1/jwKim/DLD'
+
         if opt.joint_all:
-            self.save_dir = os.path.join('net_model', 'joint_checkpoint', opt.suffix)
+            self.save_dir = os.path.join(self.base_path, 'net_model', 'joint_checkpoint', opt.suffix)
         else:   
-            self.save_dir = os.path.join('net_model', opt.train_mode + '_checkpoint', opt.suffix)
+            self.save_dir = os.path.join(self.base_path, 'net_model', opt.train_mode + '_checkpoint', opt.suffix)
         self.date_suffix = self.dt()
         self.log_dir = os.path.join(self.save_dir, 'logs')
 

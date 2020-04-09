@@ -33,7 +33,7 @@ class DemoDataset(BaseDataset):
         if self.opt.warp_cloth:
             self.img_list =[i.strip() for i in open(os.path.join(self.base_path, 'dataset/data_pair.txt'), 'r').readlines()]
         else:
-            self.img_list =[i.strip() for i in open('demo/demo.txt', 'r').readlines()]
+            self.img_list =[i.strip() for i in open('demo/demo_edit.txt', 'r').readlines()]
 
 
     def __getitem__(self, index):
@@ -53,10 +53,10 @@ class DemoDataset(BaseDataset):
         source_splitext = os.path.splitext(img_source)[0]
         cloth_splitext = os.path.splitext(cloth_img)[0]
 
-        if self.opt.warp_cloth:
-            source_splitext = os.path.join('all', source_splitext)
-            cloth_img = os.path.join('all', cloth_img)
-            cloth_splitext = os.path.join('all', cloth_splitext)
+        # if self.opt.warp_cloth:
+        source_splitext = os.path.join('all', source_splitext)
+        cloth_img = os.path.join('all', cloth_img)
+        cloth_splitext = os.path.join('all', cloth_splitext)
         
         source_img_path = os.path.join(self.base_path, 'dataset/images', source_splitext + '.jpg')
         cloth_parse_path = os.path.join(self.base_path, 'dataset/images', cloth_splitext + '_mask.jpg')
@@ -107,17 +107,13 @@ class DemoDataset(BaseDataset):
         source_pose_loc = pose_utils.pose2loc(source_pose)
         source_pose_embedding = pose_utils.heatmap_embedding(self.size, source_pose_loc)
         
-        if self.opt.warp_cloth:
-            target_splitext = os.path.splitext(target_pose)[0]
-            target_pose_path = os.path.join(self.base_path, 'dataset/pose_coco/all', target_splitext.split('/')[0], target_splitext.split('/')[1] +'_keypoints.json')
-            warped_cloth_name = source_splitext.split('/')[0] + '/' + \
-                    source_splitext.split('/')[1] + '_' + \
-                    target_splitext.split('/')[1] + '_' + \
-                    cloth_splitext.split('/')[2] + '_warped_cloth.jpg'            
-            warped_cloth_name = warped_cloth_name.split('/')[0] + '/' + warped_cloth_name.split('/')[1].split('-')[0] + '/' + warped_cloth_name.split('/')[1]
-        else:
-            target_pose_path = os.path.join(self.base_path, 'dataset/pose_coco/all', target_pose)
-            warped_cloth_name = cloth_splitext
+        target_splitext = os.path.splitext(target_pose)[0]
+        target_pose_path = os.path.join(self.base_path, 'dataset/pose_coco/all', target_splitext.split('/')[0], target_splitext.split('/')[1] +'_keypoints.json')
+        warped_cloth_name = source_splitext.split('/')[0] + '/' + \
+                source_splitext.split('/')[1] + '_' + \
+                target_splitext.split('/')[1] + '_' + \
+                cloth_splitext.split('/')[2] + '_warped_cloth.jpg'
+        warped_cloth_name = warped_cloth_name.split('/')[0] + '/' + warped_cloth_name.split('/')[1].split('-')[0] + '/' + warped_cloth_name.split('/')[1]
 
         with open(target_pose_path, 'r') as f:
             a = json.load(f)
