@@ -14,6 +14,7 @@ import os.path as osp
 from torchvision import utils
 import random
 from tensorboardX import SummaryWriter
+import copy
 summary = SummaryWriter()
 cuda0 = torch.device('cuda:0')
 
@@ -24,6 +25,8 @@ class GenerationModel(BaseModel):
         self.t0 = time()
         BaseModel.__init__(self, opt)
         self.train_mode = opt.train_mode
+        self.show_img_iter = 0
+        self.show_loss_iter = 0
         # resume of networks 
         resume_gmm = opt.resume_gmm
         resume_G_parse = opt.resume_G_parse
@@ -123,7 +126,7 @@ class GenerationModel(BaseModel):
         self.im_c = result['im_c'].float().cuda() # target warped cloth
 
         index = [x for x in list(range(20)) if x != 5 and x != 6 and x != 7]
-        real_s_ = torch.index_select(self.source_parse, 1, torch.tensor(index).cuda())
+        self.real_s_ = torch.index_select(self.source_parse, 1, torch.tensor(index).cuda())
         # self.input_parsing = torch.cat((real_s_, self.target_pose_embedding, self.cloth_parse), 1).cuda()
         
         if opt.train_mode == 'gmm':
@@ -132,7 +135,7 @@ class GenerationModel(BaseModel):
             self.agnostic = torch.cat((self.source_parse_shape, self.im_h, self.target_pose_embedding), dim=1)
                 
         elif opt.train_mode == 'parsing':
-            self.real_s = self.input_parsing
+            self.real_s = copy.deepcopy(self.real_s_)
             self.source_parse_vis = result['source_parse_vis'].float().cuda()
             self.target_parse_vis = result['target_parse_vis'].float().cuda()
     
@@ -140,12 +143,12 @@ class GenerationModel(BaseModel):
 
             if opt.joint_all:
                 # self.generated_parsing = F.softmax(self.generator_parsing(self.input_parsing), 1)
-                self.generated_parsing = real_s_
+                self.generated_parsing = copy.deepcopy(self.real_s_)
 
             else:
                 with torch.no_grad():          
                     # self.generated_parsing = F.softmax(self.generator_parsing(self.input_parsing), 1)
-                    self.generated_parsing = real_s_
+                    self.generated_parsing = copy.deepcopy(self.real_s_)
             self.input_appearance = torch.cat((self.image_without_cloth, self.warped_cloth, self.generated_parsing), 1).cuda()            
 
             "attention please"
@@ -168,10 +171,13 @@ class GenerationModel(BaseModel):
         
         elif opt.train_mode == 'face':
             if opt.joint_all:# opt.joint
-                generated_parsing = F.softmax(self.generator_parsing(self.input_parsing), 1)
-                self.generated_parsing_face = F.softmax(self.generator_parsing(self.input_parsing), 1)
+                # generated_parsing = F.softmax(self.generator_parsing(self.real_s_), 1)
+                # self.generated_parsing_face = F.softmax(self.generator_parsing(self.real_s_), 1)
+                generated_parsing = copy.deepcopy(self.real_s_)
+                self.generated_parsing_face = copy.deepcopy(self.real_s_)
             else:
-                generated_parsing = F.softmax(self.generator_parsing(self.input_parsing), 1)
+                generated_parsing = copy.deepcopy(self.real_s_)
+                # generated_parsing = F.softmax(self.generator_parsing(self.real_s_), 1)
 
                 "attention please"
                 generated_parsing_ = torch.argmax(generated_parsing, 1, keepdim=True)            
@@ -213,12 +219,11 @@ class GenerationModel(BaseModel):
         if self.train_mode == 'gmm':
             self.grid, self.theta = self.gmm_model(self.agnostic, self.cloth_image)
             self.warped_cloth_predict = F.grid_sample(self.cloth_image, self.grid)
-            summary.add_images('Image/train_gmm/pred', self.warped_cloth_predict, i)
 
         if opt.train_mode == 'parsing':
-            self.fake_t = F.softmax(self.generator_parsing(self.input_parsing), dim=1)
+            # self.fake_t = F.softmax(self.generator_parsing(self.input_parsing), dim=1)
+            self.fake_t = self.real_s_
             self.real_t = self.target_parse
-            summary.add_images('Image/train_parsing/pred', self.fake_t, i)
 
         
         if opt.train_mode == 'appearance':
@@ -229,7 +234,6 @@ class GenerationModel(BaseModel):
             p_tryon = self.warped_cloth * self.m_composite + p_rendered * (1 - self.m_composite)
             self.fake_t = p_tryon
             self.real_t = self.target_image
-            summary.add_images('Image/train_appearance/pred', self.fake_t, i)
 
 
             if opt.joint_all:
@@ -261,7 +265,6 @@ class GenerationModel(BaseModel):
             self.fake_t = create_part(self.fake_t, self.generated_parsing_face, 'face', False)
             self.refined_image = self.generated_image_without_face + self.fake_t
             self.real_t = create_part(self.target_image, self.generated_parsing_face, 'face', False)
-            summary.add_images('Image/train_face/pred', self.refined_image, i)
 
         self.t5 = time()
 
@@ -367,20 +370,25 @@ class GenerationModel(BaseModel):
 
         self.t11 = time()
 
-    def save_result(self, opt, epoch, iteration):        
+    def save_result(self, opt, epoch, iteration):
+        self.show_img_iter += iteration - self.show_img_iter
         if opt.train_mode == 'gmm':
             images = [self.cloth_image,self.warped_cloth.detach(), self.im_c]
+            summary.add_images('Image/train_gmm/im_c', self.im_c, self.show_img_iter)
 
         if opt.train_mode == 'parsing':
             fake_t_vis = pose_utils.decode_labels(torch.argmax(self.fake_t, dim=1, keepdim=True).permute(0,2,3,1).contiguous())
             images = [self.source_parse_vis, self.target_parse_vis, self.target_pose_img, self.cloth_parse, fake_t_vis]
+            summary.add_images('Image/train_parsing/fake_t_vis', fake_t_vis, self.show_img_iter)
 
         if opt.train_mode == 'appearance':
             images = [self.image_without_cloth, self.warped_cloth, self.warped_cloth_parse, self.target_image, 
                         self.cloth_image, self.generated_parsing_vis, self.fake_t.detach()]
+            summary.add_images('Image/train_appearance/fake_t', self.fake_t.detach(), self.show_img_iter)
 
         if opt.train_mode == 'face':
             images = [self.generated_image.detach(), self.refined_image.detach(), self.source_image, self.target_image, self.real_t, self.fake_t.detach()]
+            summary.add_images('Image/train_face/fake_t', self.fake_t.detach(), self.show_img_iter)
 
 
         pose_utils.save_img(images, os.path.join(self.vis_path, str(epoch) + '_' + str(iteration) + '.jpg'))
@@ -426,6 +434,7 @@ class GenerationModel(BaseModel):
             torch.save(self.discriminator_appearance.state_dict(), model_D_appearance)
        
     def print_current_errors(self, opt, epoch, i):
+        self.show_loss_iter += i - self.show_loss_iter
         if opt.train_mode == 'gmm':
             errors = {'loss_L1': self.loss.item()}
             summary.add_scalar('loss/gmm/L1_loss', self.loss.item(), epoch)
@@ -434,15 +443,15 @@ class GenerationModel(BaseModel):
             errors = {'loss_G': self.loss_G.item(), 'loss_G_GAN': self.loss_G_GAN.item(), 'loss_G_vgg':self.loss_G_vgg.item(), 'loss_G_mask':self.loss_G_mask.item(),
                         'loss_G_L1': self.loss_G_L1.item(), 'loss_D':self.loss_D.item(), 'loss_D_real': self.loss_D_real.item(), 'loss_D_fake':self.loss_D_fake.item(), 'loss_G_mask_tv': self.loss_G_mask_tv.item()}
 
-            summary.add_scalar('loss/appearance/loss_G', self.loss_G.item(), i)
-            summary.add_scalar('loss/appearance/loss_G_L1', self.loss_G_L1.item(), i)
-            summary.add_scalar('loss/appearance/loss_G_GAN', self.loss_G_GAN.item(), i)
-            summary.add_scalar('loss/appearance/loss_D', self.loss_D.item(), i)
-            summary.add_scalar('loss/appearance/loss_G_vgg', self.loss_G_vgg.item(), i)
-            summary.add_scalar('loss/appearance/loss_D_real', self.loss_D_real.item(), i)
-            summary.add_scalar('loss/appearance/loss_G_mask', self.loss_G_mask.item(), i)
-            summary.add_scalar('loss/appearance/loss_D_real', self.loss_D_real.item(), i)
-            summary.add_scalar('loss/appearance/loss_G_mask_tv', self.loss_G_mask_tv.item(), i)
+            summary.add_scalar('loss/appearance/loss_G', self.loss_G.item(), self.show_loss_iter)
+            summary.add_scalar('loss/appearance/loss_G_L1', self.loss_G_L1.item(), self.show_loss_iter)
+            summary.add_scalar('loss/appearance/loss_G_GAN', self.loss_G_GAN.item(), self.show_loss_iter)
+            summary.add_scalar('loss/appearance/loss_D', self.loss_D.item(), self.show_loss_iter)
+            summary.add_scalar('loss/appearance/loss_G_vgg', self.loss_G_vgg.item(), self.show_loss_iter)
+            summary.add_scalar('loss/appearance/loss_D_real', self.loss_D_real.item(), self.show_loss_iter)
+            summary.add_scalar('loss/appearance/loss_G_mask', self.loss_G_mask.item(), self.show_loss_iter)
+            summary.add_scalar('loss/appearance/loss_D_real', self.loss_D_real.item(), self.show_loss_iter)
+            summary.add_scalar('loss/appearance/loss_G_mask_tv', self.loss_G_mask_tv.item(), self.show_loss_iter)
 
             if opt.joint_all and opt.joint_parse_loss:
                 errors = {'loss_G': self.loss_G.item(), 'loss_G_GAN': self.loss_G_GAN.item(), 'loss_G_vgg':self.loss_G_vgg.item(), 'loss_G_mask':self.loss_G_mask.item(),
@@ -452,12 +461,12 @@ class GenerationModel(BaseModel):
             errors = {'loss_G': self.loss_G.item(), 'loss_G_GAN': self.loss_G_GAN.item(), 'loss_G_BCE': self.loss_G_BCE.item(), 
                     'loss_D':self.loss_D.item(), 'loss_D_real': self.loss_D_real.item(), 'loss_D_fake':self.loss_D_fake.item()}
 
-            summary.add_scalar('loss/parsing/loss_G', self.loss_G.item(), i)
-            summary.add_scalar('loss/parsing/loss_G_GAN', self.loss_G_GAN.item(), i)
-            summary.add_scalar('loss/parsing/loss_G_BCE', self.loss_G_BCE.item(), i)
-            summary.add_scalar('loss/parsing/loss_D', self.loss_D.item(), i)
-            summary.add_scalar('loss/parsing/loss_D_real', self.loss_D_real.item(), i)
-            summary.add_scalar('loss/parsing/loss_D_fake', self.loss_D_fake.item(), i)
+            summary.add_scalar('loss/parsing/loss_G', self.loss_G.item(), self.show_loss_iter)
+            summary.add_scalar('loss/parsing/loss_G_GAN', self.loss_G_GAN.item(), self.show_loss_iter)
+            summary.add_scalar('loss/parsing/loss_G_BCE', self.loss_G_BCE.item(), self.show_loss_iter)
+            summary.add_scalar('loss/parsing/loss_D', self.loss_D.item(), self.show_loss_iter)
+            summary.add_scalar('loss/parsing/loss_D_real', self.loss_D_real.item(), self.show_loss_iter)
+            summary.add_scalar('loss/parsing/loss_D_fake', self.loss_D_fake.item(), self.show_loss_iter)
 
 
 
@@ -465,14 +474,14 @@ class GenerationModel(BaseModel):
             errors = {'loss_G': self.loss_G.item(), 'loss_G_GAN': self.loss_G_GAN.item(), 'loss_G_vgg':self.loss_G_vgg.item(), 'loss_G_refine':self.loss_G_refine.item(),
                         'loss_G_L1': self.loss_G_L1.item(), 'loss_D':self.loss_D.item(), 'loss_D_real': self.loss_D_real.item(), 'loss_D_fake':self.loss_D_fake.item()}
 
-            summary.add_scalar('loss/face/loss_G', self.loss_G.item(), i)
-            summary.add_scalar('loss/face/loss_G_GAN', self.loss_G_GAN.item(), i)
-            summary.add_scalar('loss/face/loss_G_vgg', self.loss_G_vgg.item(), i)
-            summary.add_scalar('loss/face/loss_G_refine', self.loss_G_refine.item(), i)
-            summary.add_scalar('loss/face/loss_G_L1', self.loss_G_L1.item(), i)
-            summary.add_scalar('loss/face/loss_D', self.loss_D.item(), i)
-            summary.add_scalar('loss/face/loss_D_real', self.loss_D_real.item(), i)
-            summary.add_scalar('loss/face/loss_D_real', self.loss_D_real.item(), i)
+            summary.add_scalar('loss/face/loss_G', self.loss_G.item(), self.show_loss_iter)
+            summary.add_scalar('loss/face/loss_G_GAN', self.loss_G_GAN.item(), self.show_loss_iter)
+            summary.add_scalar('loss/face/loss_G_vgg', self.loss_G_vgg.item(), self.show_loss_iter)
+            summary.add_scalar('loss/face/loss_G_refine', self.loss_G_refine.item(), self.show_loss_iter)
+            summary.add_scalar('loss/face/loss_G_L1', self.loss_G_L1.item(), self.show_loss_iter)
+            summary.add_scalar('loss/face/loss_D', self.loss_D.item(),self.show_loss_iter)
+            summary.add_scalar('loss/face/loss_D_real', self.loss_D_real.item(), self.show_loss_iter)
+            summary.add_scalar('loss/face/loss_D_real', self.loss_D_real.item(), self.show_loss_iter)
 
 
         t = self.t11 - self.t2
