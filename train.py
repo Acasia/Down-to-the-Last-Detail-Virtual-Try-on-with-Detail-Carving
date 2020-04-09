@@ -1,4 +1,6 @@
 import os
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 import os.path as osp
 import torch
 import torch.nn as nn
@@ -16,10 +18,6 @@ from data.regular_dataset import RegularDataset
 from models.models import create_model
 from models.generation_model import GenerationModel
 from lib.geometric_matching_multi_gpu import GMM
-
-
-os.environ['CUDA_VISIBLE_DEVCIES'] = '0, 1, 2, 3'
-gpu_ids = len(os.environ['CUDA_VISIBLE_DEVCIES'].split(','))
 
 
 augment = {}

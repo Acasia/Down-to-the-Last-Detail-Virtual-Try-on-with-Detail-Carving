@@ -4,6 +4,8 @@ from models.networks import Define_G, Define_D
 import torch.optim as optim
 from config import Config
 import os
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 import os.path as osp
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -110,7 +112,7 @@ def forward(opt, paths, gpu_ids, refine_path):
             warped_cloth = warped_image(gmm, result) 
             if opt.warp_cloth:
                 warped_cloth_name = result['warped_cloth_name']
-                warped_cloth_path = os.path.join('dataset', 'warped_cloth', warped_cloth_name[0])
+                warped_cloth_path = os.path.join('/DATA1/jwKim/DLD', 'dataset', 'warped_cloth', warped_cloth_name[0])
                 if not os.path.exists(os.path.split(warped_cloth_path)[0]):
                     os.makedirs(os.path.split(warped_cloth_path)[0])
                 utils.save_image(warped_cloth * 0.5 + 0.5, warped_cloth_path)
