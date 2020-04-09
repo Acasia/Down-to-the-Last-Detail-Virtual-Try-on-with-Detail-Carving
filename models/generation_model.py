@@ -207,16 +207,19 @@ class GenerationModel(BaseModel):
 
         # setattr(self, 'input', getattr(self, 'input_' + self.train_mode))
 
-    def forward(self, opt):
+    def forward(self, opt, i):
         self.t4 = time()
 
         if self.train_mode == 'gmm':
             self.grid, self.theta = self.gmm_model(self.agnostic, self.cloth_image)
             self.warped_cloth_predict = F.grid_sample(self.cloth_image, self.grid)
+            summary.add_images('Image/train_gmm/pred', self.warped_cloth_predict, i)
 
         if opt.train_mode == 'parsing':
             self.fake_t = F.softmax(self.generator_parsing(self.input_parsing), dim=1)
             self.real_t = self.target_parse
+            summary.add_images('Image/train_parsing/pred', self.fake_t, i)
+
         
         if opt.train_mode == 'appearance':
             generated_inter = self.generator_appearance(self.input_appearance)
@@ -226,6 +229,8 @@ class GenerationModel(BaseModel):
             p_tryon = self.warped_cloth * self.m_composite + p_rendered * (1 - self.m_composite)
             self.fake_t = p_tryon
             self.real_t = self.target_image
+            summary.add_images('Image/train_appearance/pred', self.fake_t, i)
+
 
             if opt.joint_all:
 
@@ -256,6 +261,7 @@ class GenerationModel(BaseModel):
             self.fake_t = create_part(self.fake_t, self.generated_parsing_face, 'face', False)
             self.refined_image = self.generated_image_without_face + self.fake_t
             self.real_t = create_part(self.target_image, self.generated_parsing_face, 'face', False)
+            summary.add_images('Image/train_face/pred', self.refined_image, i)
 
         self.t5 = time()
 
@@ -327,10 +333,10 @@ class GenerationModel(BaseModel):
 
         self.t9 = time()
 
-    def optimize_parameters(self, opt):
+    def optimize_parameters(self, opt, i):
         
         self.t10 = time()
-        self.forward(opt)                   # compute fake images: G(A)
+        self.forward(opt, i)                # compute fake images: G(A)
 
         if opt.train_mode == 'gmm':
             self.optimizer_G.zero_grad()        # set G's gradients to zero

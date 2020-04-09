@@ -61,7 +61,7 @@ def train(opt):
             print('current D learning_rate is : ', model.get_learning_rate(model.optimizer_D))
         for i, data in enumerate(dataloader):
             model.set_input(opt, data)
-            model.optimize_parameters(opt)
+            model.optimize_parameters(opt, i)
             if i % opt.print_freq == 0:
                 model.print_current_errors(opt, epoch, i)
             if i % opt.val_freq == 0:
