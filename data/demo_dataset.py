@@ -40,12 +40,12 @@ class DemoDataset(BaseDataset):
         t0 = time.time()
         try:
             img_source = self.img_list[index].split('\t')[0]
-            target_pose = self.img_list[index].split('\t')[1]
+            target_pose = self.img_list[index].split('\t')[0]
             cloth_img = self.img_list[index].split('\t')[2]
             data_suffix = self.img_list[index].split('\t')[3]
         except:
             img_source = self.img_list[index].split(' ')[0]
-            target_pose = self.img_list[index].split(' ')[1]
+            target_pose = self.img_list[index].split(' ')[0]
             cloth_img = self.img_list[index].split(' ')[2]
             data_suffix = self.img_list[index].split(' ')[3]
         
