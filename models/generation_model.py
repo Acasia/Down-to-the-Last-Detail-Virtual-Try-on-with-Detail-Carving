@@ -124,7 +124,7 @@ class GenerationModel(BaseModel):
 
         index = [x for x in list(range(20)) if x != 5 and x != 6 and x != 7]
         real_s_ = torch.index_select(self.source_parse, 1, torch.tensor(index).cuda())
-        self.input_parsing = torch.cat((real_s_, self.target_pose_embedding, self.cloth_parse), 1).cuda()
+        # self.input_parsing = torch.cat((real_s_, self.target_pose_embedding, self.cloth_parse), 1).cuda()
         
         if opt.train_mode == 'gmm':
             self.im_h = result['im_h'].float().cuda()
@@ -139,12 +139,15 @@ class GenerationModel(BaseModel):
         elif opt.train_mode == 'appearance':
 
             if opt.joint_all:
-                self.generated_parsing = F.softmax(self.generator_parsing(self.input_parsing), 1)
-            else:    
+                # self.generated_parsing = F.softmax(self.generator_parsing(self.input_parsing), 1)
+                self.generated_parsing = real_s_
+
+            else:
                 with torch.no_grad():          
-                    self.generated_parsing = F.softmax(self.generator_parsing(self.input_parsing), 1)
+                    # self.generated_parsing = F.softmax(self.generator_parsing(self.input_parsing), 1)
+                    self.generated_parsing = real_s_
             self.input_appearance = torch.cat((self.image_without_cloth, self.warped_cloth, self.generated_parsing), 1).cuda()            
-            
+
             "attention please"
             generated_parsing_ = torch.argmax(self.generated_parsing, 1, keepdim=True)            
             self.generated_parsing_argmax = torch.Tensor()
@@ -425,15 +428,15 @@ class GenerationModel(BaseModel):
             errors = {'loss_G': self.loss_G.item(), 'loss_G_GAN': self.loss_G_GAN.item(), 'loss_G_vgg':self.loss_G_vgg.item(), 'loss_G_mask':self.loss_G_mask.item(),
                         'loss_G_L1': self.loss_G_L1.item(), 'loss_D':self.loss_D.item(), 'loss_D_real': self.loss_D_real.item(), 'loss_D_fake':self.loss_D_fake.item(), 'loss_G_mask_tv': self.loss_G_mask_tv.item()}
 
-            summary.add_scalar('loss/appearance/loss_G', self.loss_G.item(), epoch)
-            summary.add_scalar('loss/appearance/loss_G_L1', self.loss_G_L1.item(), epoch)
-            summary.add_scalar('loss/appearance/loss_G_GAN', self.loss_G_GAN.item(), epoch)
-            summary.add_scalar('loss/appearance/loss_D', self.loss_D.item(), epoch)
-            summary.add_scalar('loss/appearance/loss_G_vgg', self.loss_G_vgg.item(), epoch)
-            summary.add_scalar('loss/appearance/loss_D_real', self.loss_D_real.item(), epoch)
-            summary.add_scalar('loss/appearance/loss_G_mask', self.loss_G_mask.item(), epoch)
-            summary.add_scalar('loss/appearance/loss_D_real', self.loss_D_real.item(), epoch)
-            summary.add_scalar('loss/appearance/loss_G_mask_tv', self.loss_G_mask_tv.item(), epoch)
+            summary.add_scalar('loss/appearance/loss_G', self.loss_G.item(), i)
+            summary.add_scalar('loss/appearance/loss_G_L1', self.loss_G_L1.item(), i)
+            summary.add_scalar('loss/appearance/loss_G_GAN', self.loss_G_GAN.item(), i)
+            summary.add_scalar('loss/appearance/loss_D', self.loss_D.item(), i)
+            summary.add_scalar('loss/appearance/loss_G_vgg', self.loss_G_vgg.item(), i)
+            summary.add_scalar('loss/appearance/loss_D_real', self.loss_D_real.item(), i)
+            summary.add_scalar('loss/appearance/loss_G_mask', self.loss_G_mask.item(), i)
+            summary.add_scalar('loss/appearance/loss_D_real', self.loss_D_real.item(), i)
+            summary.add_scalar('loss/appearance/loss_G_mask_tv', self.loss_G_mask_tv.item(), i)
 
             if opt.joint_all and opt.joint_parse_loss:
                 errors = {'loss_G': self.loss_G.item(), 'loss_G_GAN': self.loss_G_GAN.item(), 'loss_G_vgg':self.loss_G_vgg.item(), 'loss_G_mask':self.loss_G_mask.item(),
@@ -443,12 +446,12 @@ class GenerationModel(BaseModel):
             errors = {'loss_G': self.loss_G.item(), 'loss_G_GAN': self.loss_G_GAN.item(), 'loss_G_BCE': self.loss_G_BCE.item(), 
                     'loss_D':self.loss_D.item(), 'loss_D_real': self.loss_D_real.item(), 'loss_D_fake':self.loss_D_fake.item()}
 
-            summary.add_scalar('loss/parsing/loss_G', self.loss_G.item(), epoch)
-            summary.add_scalar('loss/parsing/loss_G_GAN', self.loss_G_GAN.item(), epoch)
-            summary.add_scalar('loss/parsing/loss_G_BCE', self.loss_G_BCE.item(), epoch)
-            summary.add_scalar('loss/parsing/loss_D', self.loss_D.item(), epoch)
-            summary.add_scalar('loss/parsing/loss_D_real', self.loss_D_real.item(), epoch)
-            summary.add_scalar('loss/parsing/loss_D_fake', self.loss_D_fake.item(), epoch)
+            summary.add_scalar('loss/parsing/loss_G', self.loss_G.item(), i)
+            summary.add_scalar('loss/parsing/loss_G_GAN', self.loss_G_GAN.item(), i)
+            summary.add_scalar('loss/parsing/loss_G_BCE', self.loss_G_BCE.item(), i)
+            summary.add_scalar('loss/parsing/loss_D', self.loss_D.item(), i)
+            summary.add_scalar('loss/parsing/loss_D_real', self.loss_D_real.item(), i)
+            summary.add_scalar('loss/parsing/loss_D_fake', self.loss_D_fake.item(), i)
 
 
 
@@ -456,14 +459,14 @@ class GenerationModel(BaseModel):
             errors = {'loss_G': self.loss_G.item(), 'loss_G_GAN': self.loss_G_GAN.item(), 'loss_G_vgg':self.loss_G_vgg.item(), 'loss_G_refine':self.loss_G_refine.item(),
                         'loss_G_L1': self.loss_G_L1.item(), 'loss_D':self.loss_D.item(), 'loss_D_real': self.loss_D_real.item(), 'loss_D_fake':self.loss_D_fake.item()}
 
-            summary.add_scalar('loss/face/loss_G', self.loss_G.item(), epoch)
-            summary.add_scalar('loss/face/loss_G_GAN', self.loss_G_GAN.item(), epoch)
-            summary.add_scalar('loss/face/loss_G_vgg', self.loss_G_vgg.item(), epoch)
-            summary.add_scalar('loss/face/loss_G_refine', self.loss_G_refine.item(), epoch)
-            summary.add_scalar('loss/face/loss_G_L1', self.loss_G_L1.item(), epoch)
-            summary.add_scalar('loss/face/loss_D', self.loss_D.item(), epoch)
-            summary.add_scalar('loss/face/loss_D_real', self.loss_D_real.item(), epoch)
-            summary.add_scalar('loss/face/loss_D_real', self.loss_D_real.item(), epoch)
+            summary.add_scalar('loss/face/loss_G', self.loss_G.item(), i)
+            summary.add_scalar('loss/face/loss_G_GAN', self.loss_G_GAN.item(), i)
+            summary.add_scalar('loss/face/loss_G_vgg', self.loss_G_vgg.item(), i)
+            summary.add_scalar('loss/face/loss_G_refine', self.loss_G_refine.item(), i)
+            summary.add_scalar('loss/face/loss_G_L1', self.loss_G_L1.item(), i)
+            summary.add_scalar('loss/face/loss_D', self.loss_D.item(), i)
+            summary.add_scalar('loss/face/loss_D_real', self.loss_D_real.item(), i)
+            summary.add_scalar('loss/face/loss_D_real', self.loss_D_real.item(), i)
 
 
         t = self.t11 - self.t2

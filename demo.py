@@ -58,7 +58,7 @@ def forward(opt, paths, gpu_ids, refine_path):
     gmm = torch.nn.DataParallel(gmm).cuda()
 
     # 'batch'
-    generator_parsing = Define_G(opt.input_nc_G_parsing, opt.output_nc_parsing, opt.ndf, opt.netG_parsing, opt.norm, 
+    generator_parsing = Define_G(opt.input_nc_G_parsing, opt.output_nc_parsing, opt.ndf, opt.netG_parsing, opt.norm,
                             not opt.no_dropout, opt.init_type, opt.init_gain, opt.gpu_ids)
     
     generator_app_cpvton = Define_G(opt.input_nc_G_app, opt.output_nc_app, opt.ndf, opt.netG_app, opt.norm, 
@@ -68,6 +68,8 @@ def forward(opt, paths, gpu_ids, refine_path):
                             not opt.no_dropout, opt.init_type, opt.init_gain, opt.gpu_ids)
 
     models = [gmm, generator_parsing, generator_app_cpvton, generator_face]
+    # models = [gmm, generator_app_cpvton, generator_face]
+
     for model, path in zip(models, paths):
         load_model(model, path)    
     print('==>loaded model')
@@ -131,11 +133,12 @@ def forward(opt, paths, gpu_ids, refine_path):
             real_s = source_parse   
             index = [x for x in list(range(20)) if x != 5 and x != 6 and x != 7]
             real_s_ = torch.index_select(real_s, 1, torch.tensor(index).cuda())
-            input_parse = torch.cat((real_s_, target_pose_embedding, cloth_parse), 1).cuda()
+            # input_parse = torch.cat((real_s_, target_pose_embedding, cloth_parse), 1).cuda()
             
             'P'
-            generate_parse = generator_parsing(input_parse) # tanh
-            generate_parse = F.softmax(generate_parse, dim=1)
+            # generate_parse = generator_parsing(input_parse) # tanh
+            # generate_parse = F.softmax(generate_parse, dim=1)
+            generate_parse = real_s_
 
             generate_parse_argmax = torch.argmax(generate_parse, dim=1, keepdim=True).float()
             res = []
@@ -181,6 +184,8 @@ if __name__ == "__main__":
     resume_G_face = 'pretrained_checkpoint/face.tar'
 
     paths = [resume_gmm, resume_G_parse, resume_G_app_cpvton, resume_G_face]
+    # paths = [resume_gmm, resume_G_app_cpvton, resume_G_face]
+
     opt = Config().parse()
     if not os.path.exists(opt.forward_save_path):
         os.makedirs(opt.forward_save_path)
