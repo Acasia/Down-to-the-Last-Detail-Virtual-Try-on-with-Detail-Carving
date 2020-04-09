@@ -378,10 +378,13 @@ class GenerationModel(BaseModel):
             self.im_c = (self.im_c * 0.5 + 0.5)
             summary.add_images('Image/train_gmm/im_c', self.im_c, self.show_img_iter)
 
+
         if opt.train_mode == 'parsing':
             fake_t_vis = pose_utils.decode_labels(torch.argmax(self.fake_t, dim=1, keepdim=True).permute(0,2,3,1).contiguous())
             images = [self.source_parse_vis, self.target_parse_vis, self.target_pose_img, self.cloth_parse, fake_t_vis]
-            summary.add_images('Image/train_parsing/fake_t_vis', fake_t_vis, self.show_img_iter)
+            images = pose_utils.save_img(images,
+                                         os.path.join(self.vis_path, str(epoch) + '_' + str(iteration) + '.jpg'))
+            summary.add_images('Image/train_parsing/fake_t_vis', images, self.show_img_iter)
 
         if opt.train_mode == 'appearance':
             images = [self.image_without_cloth, self.warped_cloth, self.warped_cloth_parse, self.target_image, 
@@ -394,8 +397,9 @@ class GenerationModel(BaseModel):
             self.fake_t = (self.fake_t * 0.5 + 0.5)
             summary.add_images('Image/train_face/fake_t', self.fake_t.detach(), self.show_img_iter)
 
-
         pose_utils.save_img(images, os.path.join(self.vis_path, str(epoch) + '_' + str(iteration) + '.jpg'))
+
+
 
     def save_model(self, opt, epoch):
         if opt.train_mode == 'gmm':
