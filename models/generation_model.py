@@ -372,7 +372,7 @@ class GenerationModel(BaseModel):
         self.t11 = time()
 
     def save_result(self, opt, epoch, iteration):
-        self.show_img_iter += iteration - self.show_img_iter
+        self.show_img_iter += 1
         if opt.train_mode == 'gmm':
             images = [self.cloth_image,self.warped_cloth.detach(), self.im_c]
             self.im_c = (self.im_c * 0.5 + 0.5)
