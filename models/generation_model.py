@@ -1,22 +1,20 @@
 import numpy as np
 import torch
 import os
-from .base_model import BaseModel
 from models.networks import Define_G, Define_D
 from utils.transforms import create_part
 import torch.nn.functional as F
-from utils import pose_utils
 from lib.geometric_matching_multi_gpu import GMM
 from .base_model import BaseModel
 from time import time
 from utils import pose_utils
 import os.path as osp
-from torchvision import utils
-import random
 from tensorboardX import SummaryWriter
 import copy
-import torchvision
-summary = SummaryWriter()
+from config import Config
+
+opt2 = Config().parse()
+summary = SummaryWriter(opt2.tensorboard)
 cuda0 = torch.device('cuda:0')
 
 class GenerationModel(BaseModel):
@@ -134,7 +132,7 @@ class GenerationModel(BaseModel):
             self.im_h = result['im_h'].float().cuda()
             self.source_parse_shape = result['source_parse_shape'].float().cuda()
             self.agnostic = torch.cat((self.source_parse_shape, self.im_h, self.target_pose_embedding), dim=1)
-                
+
         elif opt.train_mode == 'parsing':
             self.real_s = copy.deepcopy(self.real_s_)
             self.source_parse_vis = result['source_parse_vis'].float().cuda()
@@ -157,6 +155,9 @@ class GenerationModel(BaseModel):
             self.generated_parsing_argmax = torch.Tensor()
 
             for _ in range(20):
+                """
+                에러나는 부분 : generated_parsing_
+                """
                 self.generated_parsing_argmax = torch.cat([self.generated_parsing_argmax.float().cuda(), (generated_parsing_ == _).float()], dim=1)
             self.warped_cloth_parse = ((generated_parsing_ == 5) + (generated_parsing_ == 6) + (generated_parsing_ == 7)).float().cuda()
 
@@ -289,7 +290,7 @@ class GenerationModel(BaseModel):
             self.loss_G = self.loss_G_GAN + self.loss_G_BCE
             self.loss_G.backward()
         
-        if opt.train_mode == 'appearance':          
+        if opt.train_mode == 'appearance':
             self.loss_G_GAN = self.criterionGAN(pred_fake,True) * opt.G_GAN
             # vgg_loss
             loss_vgg1,_ = self.criterion_vgg(self.fake_t, self.real_t, self.target_parse, False, True, False)
@@ -442,7 +443,7 @@ class GenerationModel(BaseModel):
             torch.save(self.discriminator_appearance.state_dict(), model_D_appearance)
        
     def print_current_errors(self, opt, epoch, i):
-        self.show_loss_iter += i - self.show_loss_iter
+        self.show_loss_iter += 1
         if opt.train_mode == 'gmm':
             errors = {'loss_L1': self.loss.item()}
             summary.add_scalar('loss/gmm/L1_loss', self.loss.item(), epoch)

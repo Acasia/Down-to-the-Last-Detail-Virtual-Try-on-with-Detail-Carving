@@ -110,6 +110,8 @@ class Config():
         ### train | val | demo
         parser.add_argument('--warp_cloth', default=False, action='store_true')
 
+        parser.add_argument('--tensorboard', type=str, default='/DATA1/jwKim/DLD/runs')
+
         args = parser.parse_args()
         print(args)
         return args
