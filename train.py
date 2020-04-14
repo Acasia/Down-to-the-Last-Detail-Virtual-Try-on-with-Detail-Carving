@@ -1,23 +1,12 @@
 import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
-import os.path as osp
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from config import Config
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from time import time
-import datetime
-import torch.backends.cudnn as cudnn
-import numpy as np
-from torchvision import utils
-import sys
 from data.regular_dataset import RegularDataset
-from models.models import create_model
 from models.generation_model import GenerationModel
-from lib.geometric_matching_multi_gpu import GMM
 
 
 augment = {}

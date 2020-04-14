@@ -96,8 +96,8 @@ class RegularDataset(BaseDataset):
         else:
             warped_cloth_img = cloth_img
         # parsing
-        source_parse_vis_path = os.path.join(self.base_path, 'dataset/parse_cihp' , self.mode, source_splitext.split('/')[0], source_splitext.split('/')[1] + '_vis.png')
-        target_parse_vis_path = os.path.join(self.base_path, 'dataset/parse_cihp' , self.mode, target_splitext.split('/')[0], target_splitext.split('/')[1] + '_vis.png')
+        source_parse_vis_path = os.path.join(self.base_path, 'dataset/parse_cihp', self.mode, source_splitext.split('/')[0], source_splitext.split('/')[1] + '_vis.png')
+        target_parse_vis_path = os.path.join(self.base_path, 'dataset/parse_cihp', self.mode, target_splitext.split('/')[0], target_splitext.split('/')[1] + '_vis.png')
         source_parse_vis = self.transforms['3'](Image.open(source_parse_vis_path))
         target_parse_vis = self.transforms['3'](Image.open(target_parse_vis_path))
         
